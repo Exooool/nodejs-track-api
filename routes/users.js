@@ -58,7 +58,7 @@ router.post('/update', function (req, res) {
   const college = req.body.college;
   const major = req.body.major;
   const user_id = req.body.user_id;
-  const study_time = '[]';
+  const study_time = '{}';
   const fans = '[]';
   const focus = '[]';
   const collection = '[]';

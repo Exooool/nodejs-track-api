@@ -153,10 +153,6 @@ router.get('/test', function () {
     });
 })
 
-function jverify() {
-
-    //    console.log(res);
-}
 
 
 
@@ -165,7 +161,7 @@ function getToken(mobile) {
     let content = { msg: "track", mobile: mobile }; // 要生成token的主题信息
     console.log(content);
     let token = jwt.sign(content, secretOrPrivateKey, {
-        expiresIn: 60 * 60 * 2400  // 24小时过期
+        expiresIn: 60 * 60 * 2400  // 2400小时过期
     });
     console.log("token ：" + token);
     return token;

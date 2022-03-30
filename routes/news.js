@@ -67,12 +67,23 @@ router.post('/view', function (req, res) {
     console.log(req.body);
     var news_id = req.body.news_id;
 
-
-    query('UPDATE news_list SET view_num =view_num+1 WHERE news_id=?', [news_id], function (error, results, fields) {
+    const sql = 'SELECT news_id,news_content,content,news_time,hashtag,news_title,news_img,view_num,like_num, b.user_id, b.user_name,user_img,(SELECT COUNT(*) FROM news_comment c WHERE c.news_id = a.news_id) AS comment_num   FROM   news_list a JOIN user_profile b WHERE a.user_id = b.user_id and news_id = ?';
+    query(sql, [news_id], function (error, results, fields) {
         if (error) throw error;
-        console.log('文章' + news_id + 'like_num增加1');
-        res.json({ 'status': 0 });
+        // console.log(results);
+        // 返回文章信息
+        res.json({ 'status': 0, 'data': results });
+
+        // 增加view_num
+        query('UPDATE news_list SET view_num =view_num+1 WHERE news_id=?', [news_id], function (error, results, fields) {
+            if (error) throw error;
+            console.log('文章' + news_id + 'like_num增加1');
+
+        })
     })
+
+
+
 
     return;
 
