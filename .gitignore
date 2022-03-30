@@ -1,5 +1,4 @@
 # 不上传node_modules
 /node_modules/
-
 # 不上传图片文件夹
 /public/images/
