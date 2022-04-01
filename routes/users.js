@@ -32,7 +32,8 @@ router.post('/get', function (req, res) {
   console.log(req.body);
   let user_id = req.body.query_user_id ?? req.body.user_id;
 
-  query('SELECT * FROM user_profile WHERE user_id = ?', [user_id], function (error, results, fields) {
+  const sql = 'SELECT *,(SELECT COUNT(*) FROM focus_fans_list WHERE focus = ?) AS focus_length, (SELECT COUNT(*) FROM focus_fans_list WHERE befocus = ?) AS befocus_length  FROM user_profile WHERE user_id = ?';
+  query(sql, [user_id, user_id, user_id], function (error, results, fields) {
     if (error) throw error;
     // console.log('The solution is: ', results);
     var backData = {
@@ -148,20 +149,69 @@ router.post('/rank', function (req, res) {
 
 
 // 获取关注用户相关信息
-router.get('/focus/info', function (req, res) {
+router.post('/getFocusOrBefocusList', function (req, res) {
   console.log(req.body);
-  const user_id = req.body.query_user_id ?? req.body.user_id;
-  query('SELECT focus FROM user_profile WHERE user_id = ?', [user_id], function (error, results, fields) {
+  const user_id = req.body.user_id;
+  const type = req.body.type;
+  const sql =
+    type == 0 ?
+      'SELECT * FROM focus_fans_list a JOIN user_profile b WHERE a.befocus = b.user_id AND  a.focus = ?'
+      : 'SELECT * FROM focus_fans_list a JOIN user_profile b WHERE a.focus = b.user_id AND  a.befocus = ?';
+  query(sql, [user_id], function (error, results, fields) {
     if (error) throw error;
-    let news_list = JSON.parse(results[0]['focus']);
-    // console.log(list);
-    // 查询关注列表用户的信息
-    query('SELECT * FROM user_profile WHERE user_id IN(?);', [news_list], function (error, results, fields) {
-      if (error) throw error;
-      // console.log(results);
-      res.json({ 'status': 0, 'data': results });
+    console.log(results);
+    res.json({
+      'status': 0,
+      'data': results
     })
   });
+
+})
+
+// 查询用户是否关注
+router.post('/isFocus', function (req, res) {
+  console.log(req.body);
+  const user_id = req.body.user_id;
+  const other_user_id = req.body.other_user_id;
+
+  const sql = 'SELECT * FROM focus_fans_list WHERE focus =? AND befocus=?';
+  query(sql, [user_id, other_user_id], function (error, results, fields) {
+    if (error) throw error;
+    console.log(results);
+    res.json(results);
+  })
+
+})
+
+
+// 关注用户
+router.post('/focus', function (req, res) {
+  console.log(req.body);
+  const user_id = req.body.user_id;
+  const other_user_id = req.body.other_user_id;
+
+  const sql1 = 'SELECT * FROM focus_fans_list WHERE focus =? AND befocus=?';
+  query(sql1, [user_id, other_user_id], function (error, results, fields) {
+    if (error) throw error;
+
+    console.log(results);
+    let sql2;
+    // 判断是取消关注 还是 关注
+    if (results.length == 0) {
+      sql2 = 'INSERT INTO focus_fans_list(focus,befocus) VALUES(?,?)';
+    } else {
+      sql2 = 'DELETE FROM focus_fans_list  WHERE focus =? AND befocus=?';
+    }
+
+    // 执行
+    query(sql2, [user_id, other_user_id], function (error, results, fields) {
+      if (error) throw error;
+      console.log(results);
+      res.json({ 'status': 0, 'data': results });
+    })
+
+
+  })
 
 })
 

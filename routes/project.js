@@ -74,20 +74,30 @@ router.post('/update', function (req, res, next) {
 router.post('/group/create', function (req, res) {
     console.log(req.body);
     const user_id = req.body.user_id;
-    const user_list = JSON.stringify([req.body.user_id]);
     const frequency = req.body.frequency;
-    const sql1 = 'INSERT INTO group_list(create_user,user_list,frequency) VALUES(?,?,?)';
-    query(sql1, [user_id, user_list, frequency], function (error, results, fields) {
+    const sql1 = 'INSERT INTO group_list(create_user,frequency) VALUES(?,?)';
+    query(sql1, [user_id, frequency], function (error, results, fields) {
         if (error) throw error;
 
         const sql2 = 'SELECT MAX(group_id) as group_id FROM group_list WHERE create_user = ? ORDER BY create_time DESC';
         query(sql2, [user_id], function (error, results, fields) {
             if (error) throw error;
-            // 返回刚刚创建的group_id
-            res.json({
-                "status": 0,
-                "data": results
-            });
+
+            const group_id = results[0].group_id;
+            console.log(group_id);
+            // 插入group_member表
+            const sql3 = 'INSERT INTO group_member(group_id,user_id) VALUES(?,?)';
+            query(sql3, [group_id, user_id], function (error, results, fields) {
+                if (error) throw error;
+                // 返回刚刚创建的group_id
+                res.json({
+                    'status': 0,
+                    'data': {
+                        'group_id': group_id
+                    }
+                });
+            })
+
         })
 
     })
@@ -106,16 +116,20 @@ router.post('/group/create', function (req, res) {
 
 // })
 
-// 获取互助小组信息
-// router.post('/group/get', function (req, res) {
-//     console.log(req.body);
-//     const user_id = req.body.user_id;
-//     const sql = 'INSERT INTO group_list(user_one) VALUES(123)';
-//     query(sql, [], function (error, results, fields) {
+// 获取加入的互助小组信息
+router.get('/group/get', function (req, res) {
+    console.log(req.body);
+    const user_id = req.body.user_id;
+    const sql = 'SELECT f.group_id,f.user_id ,f.project_id, f.user_img, f.user_name, g.project_title,g.frequency FROM (SELECT c.group_id,c.user_id ,c.project_id, d.user_img, d.user_name FROM group_member c JOIN user_profile d JOIN (SELECT a.group_id FROM group_member a JOIN group_list b WHERE  a.user_id = ? AND a.group_id = b.group_id) e WHERE c.group_id = e.group_id AND c.user_id =d.user_id) f JOIN project_list g WHERE f.project_id = g.project_id';
+    query(sql, [user_id], function (error, results, fields) {
+        if (error) throw error;
+        res.json({
+            'status': 0,
+            'data': results
+        })
+    })
 
-//     })
-
-// })
+})
 
 // 获取互助小组成员信息
 router.post('/group/getById', function (req, res) {
@@ -154,19 +168,19 @@ router.post('/study', function (req, res) {
             // 判断当前时间是否在object中
             timeMap[now_time] = (now_time in timeMap) ? timeMap[now_time] + study_time : study_time;
             console.log(timeMap);
-            
+
             const sql2 = 'UPDATE project_list SET study_time = ? WHERE project_id = ? ';
             query(sql2, [JSON.stringify(timeMap), project_id], function (error, results, fields) {
                 if (error) reject(error);
                 // console.log(results.affectedRows);
 
                 // 判断影响行数 看是否修改成功
-                if(results.affectedRows == 1){
+                if (results.affectedRows == 1) {
                     resolve(results.affectedRows);
-                }else{
+                } else {
                     reject('project_list study_time 影响行数不为1');
                 }
-                
+
             })
 
 
@@ -189,10 +203,10 @@ router.post('/study', function (req, res) {
             const sql2 = 'UPDATE user_profile SET study_time = ? WHERE user_id = ? ';
             query(sql2, [JSON.stringify(timeMap), user_id], function (error, results, fields) {
                 if (error) reject(error);
-                
-                if(results.affectedRows == 1){
+
+                if (results.affectedRows == 1) {
                     resolve(results.affectedRows);
-                }else{
+                } else {
                     reject('user_profile study_time 影响行数不为1');
                 }
             })
@@ -206,9 +220,9 @@ router.post('/study', function (req, res) {
         query(sql, [study_time, user_id], function (error, results, fields) {
             if (error) reject(error);
             console.log(results);
-            if(results.affectedRows == 1){
+            if (results.affectedRows == 1) {
                 resolve(results.affectedRows);
-            }else{
+            } else {
                 reject('user_profile total_time 影响行数不为1');
             }
         })
