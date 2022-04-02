@@ -6,7 +6,7 @@ var path = require('path');
 
 var router = express.Router();
 
-var uploader = multer({ dest: path.join(path.dirname(__dirname), 'public', 'images', 'article') })
+var uploader = multer({ dest: path.join(path.dirname(__dirname), 'public', 'images') })
 
 /* GET users listing. */
 router.get('/', function (req, res, next) {
@@ -37,9 +37,9 @@ router.post('/imgPost', uploader.single('image'), function (req, res) {
 
 // 上传多张图片
 
-router.post('/multiImgPost', function (req, res) {
+// router.post('/multiImgPost', function (req, res) {
 
-})
+// })
 
 
 // 上传文章

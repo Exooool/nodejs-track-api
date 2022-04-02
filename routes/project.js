@@ -39,28 +39,62 @@ router.post('/add', function (req, res, next) {
     const secret = 'false';
     // 时间以键值对存储
     const study_time = '{}';
-    const sql = 'INSERT INTO project_list(user_id,project_title,project_img,stage_list,end_time,single_time,frequency,remainder_time,secret,study_time) VALUES(?,?,?,?,?,?,?,?,?,?)';
-    query(sql, [user_id, project_title, project_img, stage_list, end_time, single_time, frequency, remainder_time, secret, study_time], function (error, results, fields) {
+    const sql1 = 'INSERT INTO project_list(user_id,project_title,project_img,stage_list,end_time,single_time,frequency,remainder_time,secret,study_time) VALUES(?,?,?,?,?,?,?,?,?,?)';
+    query(sql1, [user_id, project_title, project_img, stage_list, end_time, single_time, frequency, remainder_time, secret, study_time], function (error, results, fields) {
         if (error) throw error;
 
-        res.json({
-            "status": 0,
-            "data": results
-        });
+        const sql2 = 'SELECT MAX(project_id) project_id FROM project_list WHERE user_id = ?';
+        query(sql2, [user_id], function (error, results, fields) {
+            if (error) throw error;
+            console.log(results);
+            res.json({
+                "status": 0,
+                "data": { 'project_id': results[0].project_id }
+            });
+        })
+
     })
 });
 
-// 删除计划
+// 删除计划 如果有互助小组连着互助小组一起删除
 router.post('/remove', function (req, res, next) {
     const project_id = req.body.project_id;
+    const group_id = req.body.group_id;
+    console.log(req.body);
 
     query('DELETE FROM project_list WHERE project_id = ?', [project_id], function (error, results, fields) {
         if (error) throw error;
 
-        res.json({
-            "status": 0,
-            "data": results
-        });
+        // 如果有加入互助小组 判断是否还剩人 否 删除互助小组
+        if (group_id != null) {
+            console.log('有互助小组')
+            query('SELECT COUNT(group_id) member_length FROM group_member WHERE group_id = ?', [group_id], function (error, results, fields) {
+                if (error) throw error;
+                console.log(results);
+                // 只剩0个人时
+                if (results[0].member_length == 0) {
+                    console.log('只剩一个人');
+                    query('DELETE FROM group_list WHERE group_id = ?', [group_id], function (error, results, fields) {
+                        if (error) throw error;
+                        res.json({
+                            "status": 0,
+                            "data": results
+                        });
+                    })
+                }else{
+                    res.json({
+                        "status": 0,
+                        "data": results
+                    });
+                }
+            })
+        } else {
+            res.json({
+                "status": 0,
+                "data": results
+            });
+        }
+
     })
 });
 
@@ -74,6 +108,7 @@ router.post('/update', function (req, res, next) {
 router.post('/group/create', function (req, res) {
     console.log(req.body);
     const user_id = req.body.user_id;
+    const project_id = req.body.project_id;
     const frequency = req.body.frequency;
     const sql1 = 'INSERT INTO group_list(create_user,frequency) VALUES(?,?)';
     query(sql1, [user_id, frequency], function (error, results, fields) {
@@ -85,18 +120,32 @@ router.post('/group/create', function (req, res) {
 
             const group_id = results[0].group_id;
             console.log(group_id);
-            // 插入group_member表
-            const sql3 = 'INSERT INTO group_member(group_id,user_id) VALUES(?,?)';
-            query(sql3, [group_id, user_id], function (error, results, fields) {
-                if (error) throw error;
-                // 返回刚刚创建的group_id
-                res.json({
-                    'status': 0,
-                    'data': {
-                        'group_id': group_id
-                    }
-                });
+            // 插入project_list 中的group_id
+            let p1 = new Promise(function (resolve, reject) {
+                const sql4 = 'UPDATE project_list SET group_id = ? WHERE project_id = ?';
+                query(sql4, [group_id, project_id], function (error, results, fields) {
+                    if (error) reject(error);
+                    resolve(results);
+                })
             })
+
+            // 插入group_member表
+            let p2 = new Promise(function (resolve, reject) {
+                const sql3 = 'INSERT INTO group_member(group_id,user_id,project_id) VALUES(?,?,?)';
+                query(sql3, [group_id, user_id, project_id], function (error, results, fields) {
+                    if (error) reject(error);
+                    resolve(results);
+                })
+            })
+
+            Promise.all([p1, p2]).then(function (values) {
+                console.log(values);
+                res.json({ 'status': 0, 'data': { 'group_id': group_id }, 'msg': '小组创建成功' });
+            }, function (error) {
+                console.log(error);
+                res.json({ 'status': 1, 'msg': '创建小组异常' });
+            });
+
 
         })
 
@@ -106,15 +155,54 @@ router.post('/group/create', function (req, res) {
 
 
 // 匹配小组
-// router.post('/group/add', function (req, res) {
-//     console.log(req.body);
-//     const user_id = req.body.user_id;
-//     const sql = 'INSERT INTO group_list(user_one) VALUES(123)';
-//     query(sql, [], function (error, results, fields) {
+router.post('/group/add', function (req, res) {
+    console.log(req.body);
+    const user_id = req.body.user_id;
+    const project_id = req.body.project_id;
+    const frequency = req.body.frequency;
+    const sql1 = 'SELECT MIN(c.group_id) group_id FROM (SELECT COUNT(a.group_id)  group_length,a.group_id FROM group_list a JOIN (SELECT * FROM group_member WHERE group_id NOT IN(SELECT group_id FROM group_member WHERE user_id = ?)) b  WHERE a.frequency = ? AND a.group_id = b.group_id GROUP BY a.group_id) c WHERE c.group_length < 3 ';
+    query(sql1, [user_id, frequency], function (error, results, fields) {
+        if (error) throw error;
 
-//     })
+        console.log(results);
+        if (results[0].group_id != null) {
 
-// })
+            const group_id = results[0].group_id;
+            // 插入project_list 中的group_id
+            let p1 = new Promise(function (resolve, reject) {
+                const sql4 = 'UPDATE project_list SET group_id = ? WHERE project_id = ?';
+                query(sql4, [group_id, project_id], function (error, results, fields) {
+                    if (error) reject(error);
+                    resolve(results);
+                })
+            })
+
+            // 插入group_member表
+            let p2 = new Promise(function (resolve, reject) {
+                const sql3 = 'INSERT INTO group_member(group_id,user_id,project_id) VALUES(?,?,?)';
+                query(sql3, [group_id, user_id, project_id], function (error, results, fields) {
+                    if (error) reject(error);
+                    resolve(results);
+                })
+            })
+
+            Promise.all([p1, p2]).then(function (values) {
+                console.log(values);
+                res.json({ 'status': 0, 'data': { 'group_id': group_id }, 'msg': '加入小组成功' });
+            }, function (error) {
+                console.log(error);
+                res.json({ 'status': 1, 'msg': '加入小组异常' });
+            });
+        } else {
+            res.json({
+                'status': 2,
+                'msg': '没有能够匹配的小组'
+            })
+        }
+
+    })
+
+})
 
 // 获取加入的互助小组信息
 router.get('/group/get', function (req, res) {
@@ -129,6 +217,41 @@ router.get('/group/get', function (req, res) {
         })
     })
 
+})
+
+// 退出互助小组
+router.post('/group/remove', function (req, res) {
+    console.log(req.body);
+    const user_id = req.body.user_id;
+    const group_id = req.body.group_id;
+    query('DELETE FROM group_member WHERE group_id = ? AND user_id =? ', [group_id, user_id], function (error, results, fields) {
+        if (error) throw error;
+
+        // 如果有加入互助小组 判断是否还剩人 否 删除互助小组
+        if (group_id != null) {
+            console.log('有互助小组')
+            query('SELECT COUNT(group_id) member_length FROM group_member WHERE group_id = ?', [group_id], function (error, results, fields) {
+                if (error) throw error;
+                console.log(results);
+                // 只剩0个人时
+                if (results[0].member_length == 0) {
+                    console.log('只剩一个人');
+                    query('DELETE FROM group_list WHERE group_id = ?', [group_id], function (error, results, fields) {
+                        if (error) throw error;
+                        res.json({
+                            "status": 0,
+                            "data": results
+                        });
+                    })
+                }
+            })
+        } else {
+            res.json({
+                "status": 0,
+                "data": results
+            });
+        }
+    })
 })
 
 // 获取互助小组成员信息
@@ -228,7 +351,7 @@ router.post('/study', function (req, res) {
         })
     })
 
-    Promise.all([p1, p2]).then(function (values) {
+    Promise.all([p1, p2, p3]).then(function (values) {
         console.log(values);
         res.json({ 'status': 0, 'msg': '上传成功' });
     }, function (error) {

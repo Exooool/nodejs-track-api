@@ -128,29 +128,43 @@ router.post('/messageVerify', function (req, res) {
     // res.json(getToken(phone));
 })
 
-router.get('/test', function () {
-    // http.get('https://api.verification.jpush.cn/v1/web/loginTokenVerify', (res) => {
-    //     var html = ""
-    //     res.on("data", (data) => {
-    //         html += data
-    //     })
 
-    //     res.on("end", () => {
-    //         console.log(html)
-    //     })
-    // }).on('error', (e) => {
-    //     console.log(`Got error: ${e.message}`);
-    // });
-    https.get('https://api.verification.jpush.cn/v1/web/loginTokenVerify', (res) => {
-        var html = ""
-        res.on("data", (data) => {
-            html += data
+// 使用极光认证一键登录
+router.get('/loginTokenVerify', function (req,res) {
+    console.log(req.body);
+    const loginToken = req.body.loginToken;
+    let options = {
+        url: 'https://api.verification.jpush.cn/v1/web/loginTokenVerify' + msg_id + '/valid',
+        method: "POST",
+        headers: {
+            "content-type": "application/json",
+            "Authorization": "Basic N2M1MTJkYTY0NjQ0NmNjNjlmOWM1NWE1Ojg4NTI2OWE1NDNlZmVjZTdlMTQ1OGZjZQ=="
+        },
+        body: JSON.stringify({
+            "code": loginToken
         })
+    };
+    request(options,function(error, response, body){
+        console.log(body);
+        // 8000为成功验证token的代码
+        if(body.code==8000){
+            console.log(body.phone);
+            
+            // 将获取到的rsa加密的手机号 进行界面得到mobile
+            
+            // 判断该用户是不是新用户
+            query('SELECT * FROM user_profile WHERE user_id = ?',[mobile],function (error, results, fields){
+                
+            })
 
-        res.on("end", () => {
-            console.log(html)
-        })
-    });
+        }else{
+            res.json({
+                'status': 1,
+                'msg': '一键登录失败'
+            })
+        }
+    })
+
 })
 
 
