@@ -5,7 +5,6 @@ var jwt = require('jsonwebtoken');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 
-var indexRouter = require('./routes/index');
 var loginRouter = require('./routes/login');
 var usersRouter = require('./routes/users');
 var newsRouter = require('./routes/news');
@@ -33,31 +32,42 @@ app.use('/login', loginRouter);
 var secretOrPrivateKey = "I am a goog man!"
 // 设置路由拦截
 app.use(function (req, res, next) {
-  // token校验 防止过期
-  if (!checkToken(req.headers.authorization)) {
+  const token = req.headers.authorization;
+  if (token != null) {
+    if (!checkToken(req.headers.authorization)) {
+      var error = {
+        "status": 2,
+        "msg": "token异常，过期或不存在"
+      }
+      return res.json(error);
+    }
+    console.log('token解析结果如下：');
+    console.log(jwt.verify(req.headers.authorization, secretOrPrivateKey));
+    // 将解析的电话号码通过body传递
+    const mobile = jwt.verify(req.headers.authorization, secretOrPrivateKey).mobile;
+
+    req.body.mobile = mobile;
+
+    query('SELECT user_id FROM user_profile WHERE mobile=?', [mobile], function (error, results, fields) {
+      if (error) throw error;
+      // console.log(results[0]['user_id']);
+      req.body.user_id = results[0]['user_id'];
+
+
+      next();
+    })
+
+  } else {
     var error = {
       "status": 2,
-      "msg": "token异常，过期或不存在"
+      "msg": "需要token"
     }
     return res.json(error);
   }
-  console.log('token解析结果如下：');
-  console.log(jwt.verify(req.headers.authorization, secretOrPrivateKey));
-  // 将解析的电话号码通过body传递
-  const mobile = jwt.verify(req.headers.authorization, secretOrPrivateKey).mobile;
 
-  req.body.mobile = mobile;
 
-  query('SELECT user_id FROM user_profile WHERE mobile=?', [mobile], function (error, results, fields) {
-    if (error) throw error;
-    // console.log(results[0]['user_id']);
-    req.body.user_id = results[0]['user_id'];
-    
-    
-    next();
-  })
 
-  
+
 })
 
 // token检验方法
@@ -70,13 +80,12 @@ function checkToken(token) {
   }
 };
 
-app.use('/', indexRouter);
 
 app.use('/users', usersRouter);
 app.use('/news', newsRouter);
 app.use('/article', articleRouter);
 app.use('/chart', chartRouter);
-app.use('/project',projectRouter);
+app.use('/project', projectRouter);
 
 
 // catch 404 and forward to error handler

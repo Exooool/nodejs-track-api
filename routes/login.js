@@ -1,6 +1,7 @@
 var express = require('express');
 var request = require('request');
 var jwt = require('jsonwebtoken');
+var NodeRSA = require('node-rsa');
 var https = require('https');
 var query = require('../database.config')
 var router = express.Router();
@@ -9,40 +10,42 @@ var router = express.Router();
 var secretOrPrivateKey = "I am a goog man!"
 
 
+// rsa私钥进行解密
+var privateKey =
+    '-----BEGIN PRIVATE KEY-----' +
+    'MIICdgIBADANBgkqhkiG9w0BAQEFAASCAmAwggJcAgEAAoGBANDXx1zZ0VfqITzQ' +
+    'aBOZe80NWmtdbNNbIG8YpDBLQZ/FkQW2ncEfPQwcwihRGceGIKDGfyT8tl97IFhi' +
+    'Nbjtyf7N2lzVK1dVBzjFLKVJSvvsC8ISJiHVEMbvq6E/TILk0argA7ucmvlLI77G' +
+    'mXk+8OlbaSHYpcnJ6egXXbuOtZapAgMBAAECgYAsGmVvplAfUMJUJW7VNMSAOSGv' +
+    'Krugps3iqEGEMWBabU6C9l26Ou6ZcDlQalAXYqvhSAnxtayN3WKnR5Ywx4awdtRw' +
+    'dg8InQQMDvy2J/kdH8WcbWkVyLZVBqDuJcrt429/1o6FEpoNs0r3n6ATMJlJF//G' +
+    'r/XNzcDsSCDsyU31AQJBAPU0cAF55B1PwJpo6mMyXjnGsoaek3qaA73NO1vamyvb' +
+    'wQA+LWOXHyJw1y7cx8k4iJht+guKl/yJcpcfqpUjWJUCQQDaCYbTHFBeQJ/Ey1Rp' +
+    'g1xsFACxA4BpCZjt/DNzs9WzFv/1aB1xjvHiZcE4AGofXe7LshRF65ZcWJQc2ojx' +
+    'YbzFAkBZ2u1wnQpK837RFsFNuJdu9LFXQ6UnuGjGlP67mlBishT30dEwPaDbLh6s' +
+    'vZs40c68jRCkShWIJZYoayJHpLxBAkEAkK2noCf2kEQzf+Mn9QesaS7wsoTPTWOH' +
+    '7cre3VSkZbzKRS4782FV0dORXbawtHWhAdr9ptPHpylDxs2f9wPSvQJAESL+qJ48' +
+    'NHoKSkM1zNDlB6CeS54XYPWOX63aC4ect5055e75KLf1Kxld5vXeadrS3NYm3BRk' +
+    'DCL+D7c4Ewu3pQ==' +
+    '-----END PRIVATE KEY-----';
+
+//解密方法 
+function decryptByPrivateKey(data) {
+    const key = new NodeRSA(privateKey);
+    key.setOptions({ encryptionScheme: 'pkcs1' })
+    let _data = key.decrypt(data, 'utf8');
+    console.error("-----encryptMsg By PublicKey: ", _data)
+    return _data;
+}
+
+
+
+
 // 测试用
 router.post('/', function (req, res) {
     // console.log(req.headers.authorization);
-    console.log(req.body)
-
-
-
-    function userQuery(callback) {
-        query('SELECT * FROM user_profile WHERE  mobile =?', [req.body.phone], function (error, results, fields) {
-            if (error) throw error;
-            // console.log('The solution is: ', results);
-            if (results.length != 0) {
-                console.log('存在该用户');
-                callback(true);
-            } else {
-                console.log('不存在该用户');
-                callback(false)
-            }
-            res.json({ "s": "123" });
-
-        });
-    }
-    userQuery(function (e) {
-        console.log(e);
-        if (!e) {
-            query('INSERT INTO user_profile(mobile,password,user_img,sex,user_name,college,major,mail) VALUES(?,?,?,?,?,?,?,?)', ['18290330710', 'ashcisahaskdkladil', 'ashduwubjiuqwn21321', '男', '给你一拳', '北理珠', '环境工程', '13727079170@qq.com'], function (error, results, fields) {
-                if (error) throw error;
-                console.log('插入成功');
-            });
-        }
-
-    })
-    return;
-
+    console.log(req.body);
+    res.json(decryptByPrivateKey(req.body.loginToken));
 })
 
 
@@ -107,8 +110,8 @@ router.post('/messageVerify', function (req, res) {
             UserQuery(function (first) {
                 if (first) {
                     // 插入新用户数据
-                    var sql = 'INSERT INTO user_profile(mobile,password,user_img,sex,user_name,college,major,mail) VALUES(?,?,?,?,?,?,?,?)'
-                    query(sql, [mobile, '0000000000', '', '保密', '轨迹用户', '无', '无', '无'], function (error, results, fields) {
+                    var sql = 'INSERT INTO user_profile(mobile,password,user_img,sex,user_name,college,major,mail,study_time,collection) VALUES(?,?,?,?,?,?,?,?,?,?)'
+                    query(sql, [mobile, '0000000000', '', '保密', '轨迹用户', '无', '无', '无','{}','[]'], function (error, results, fields) {
                         if (error) throw error;
                         console.log('插入成功');
                     });
@@ -130,34 +133,76 @@ router.post('/messageVerify', function (req, res) {
 
 
 // 使用极光认证一键登录
-router.get('/loginTokenVerify', function (req,res) {
+router.post('/loginTokenVerify', function (req, res) {
     console.log(req.body);
     const loginToken = req.body.loginToken;
     let options = {
-        url: 'https://api.verification.jpush.cn/v1/web/loginTokenVerify' + msg_id + '/valid',
+        url: 'https://api.verification.jpush.cn/v1/web/loginTokenVerify',
         method: "POST",
         headers: {
             "content-type": "application/json",
             "Authorization": "Basic N2M1MTJkYTY0NjQ0NmNjNjlmOWM1NWE1Ojg4NTI2OWE1NDNlZmVjZTdlMTQ1OGZjZQ=="
         },
         body: JSON.stringify({
-            "code": loginToken
+            "loginToken": loginToken
         })
     };
-    request(options,function(error, response, body){
-        console.log(body);
+    request(options, function (error, response, body) {
+        let data = JSON.parse(body)
+        console.log(data);
         // 8000为成功验证token的代码
-        if(body.code==8000){
-            console.log(body.phone);
-            
+        if (data.code == 8000) {
+            console.log(data.phone);
+            const phone = data.phone;
+
+            // 解析后的手机号
+            const mobile =  decryptByPrivateKey(phone);
+            console.log(mobile);
             // 将获取到的rsa加密的手机号 进行界面得到mobile
-            
+
             // 判断该用户是不是新用户
-            query('SELECT * FROM user_profile WHERE user_id = ?',[mobile],function (error, results, fields){
-                
+            // query('SELECT * FROM user_profile WHERE user_id = ?',[mobile],function (error, results, fields){
+
+            // })
+
+            function UserQuery(callback) {
+                query('SELECT * FROM user_profile WHERE  mobile =?', [mobile], function (error, results, fields) {
+                    if (error) throw error;
+                    // console.log('The solution is: ', results);
+                    let first = true;
+                    if (results.length != 0) {
+                        console.log('not')
+                        first = false;
+                    }
+                    console.log(first);
+                    let backData = {
+                        "is_valid": true,
+                        "token": getToken(mobile),
+                        "first": first
+                    }
+
+                    // 传回first进行判断
+                    callback(first);
+
+                    console.log(backData);
+                    res.json(backData);
+                });
+            }
+
+            UserQuery(function (first) {
+                if (first) {
+                    // 插入新用户数据
+                    var sql = 'INSERT INTO user_profile(mobile,password,user_img,sex,user_name,college,major,mail,study_time,collection) VALUES(?,?,?,?,?,?,?,?,?,?)'
+                    query(sql, [mobile, '0000000000', '', '保密', '轨迹用户', '无', '无', '无','{}','[]'], function (error, results, fields) {
+                        if (error) throw error;
+                        console.log('插入成功');
+                    });
+                }
             })
 
-        }else{
+            return;
+
+        } else {
             res.json({
                 'status': 1,
                 'msg': '一键登录失败'
