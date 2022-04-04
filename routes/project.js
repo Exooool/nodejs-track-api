@@ -81,7 +81,7 @@ router.post('/remove', function (req, res, next) {
                             "data": results
                         });
                     })
-                }else{
+                } else {
                     res.json({
                         "status": 0,
                         "data": results
@@ -358,6 +358,101 @@ router.post('/study', function (req, res) {
         console.log(error);
         res.json({ 'status': 1, 'msg': '数据上传异常' });
     });
+
+})
+
+
+// 邀请用户加入互助小组
+router.post('/invite', function (req, res) {
+    console.log(req.body);
+    const user_id = req.body.user_id;
+    const frequency = req.body.frequency;
+    const invite = req.body.invite;
+    const project_id = req.body.project_id;
+    const group_id = req.body.group_id;
+
+    for (let i = 0; i < invite.length; i++) {
+        query('SELECT * FROM chart_list WHERE ? IN(user_one,user_two) AND ? IN(user_one,user_two)', [user_id, invite[i]], function (error, results, fields) {
+            if (error) {
+                res.json({ 'status': 1, 'erro': error })
+                return;
+            };
+
+            // 格式化日期
+            const time = moment(new Date().toLocaleString()).format('YYYY-MM-DD HH:mm:ss');
+            const item = {
+                "time": time,
+                "user_id": user_id,
+                "content": "邀请你加入每天" + frequency + "的计划互助小组。#*" + project_id + "#*" + group_id
+            };
+            console.log(time);
+            // 如果没有创建聊天室就创建
+            if (results.length == 0) {
+                const chart_data = [item];
+                console.log(JSON.stringify(chart_data));
+                const sql = 'INSERT INTO chart_list(user_one,user_two,chart_data) VALUES(?,?,?)';
+                query(sql, [user_id, invite[i], JSON.stringify(chart_data)], function (error, results, fields) {
+                    if (error) {
+                        res.json({ 'status': 1, 'erro': error })
+                        return;
+                    };
+                    console.log(results);
+
+                })
+            } else {
+                // 如果有就添加上去
+                const chart_id = results[0].chart_id;
+                const chart_data = JSON.parse(results[0].chart_data);
+                chart_data.push(item);
+                console.log(chart_data);
+                const sql = 'UPDATE chart_list SET chart_data = ? WHERE chart_id = ?';
+                query(sql, [JSON.stringify(chart_data), chart_id], function (error, results, fields) {
+                    if (error) {
+                        res.json({ 'status': 1, 'erro': error })
+                        return;
+                    };
+                    console.log(results);
+
+                })
+            }
+        })
+    }
+
+    res.json({ 'status': 0, 'msg': '邀请成功' })
+
+
+})
+
+// 接受邀请
+
+router.post('/acceptInvite', function (req, res) {
+    console.log(req.body);
+    const project_id = req.body.project_id;
+    const group_id = req.body.group_id;
+    const user_id = req.body.user_id
+
+    // 检查当前小组是否存在
+    query('SELECT * FROM group_list WHERE group_id = ? ', [group_id], function (error, results, fields) {
+        if (error) throw error;
+
+        if (results.length != 0) {
+            // 检查当前接受用户是否已加入该小组
+            query('SELECT * FROM group_member WHERE user_id = ? AND group_id = ? AND project_id = ?', [user_id,group_id,project_id], function (error, results, fields) {
+                if (error) throw error;
+                if(results.length!=0){
+                    res.json({ 'status': 2, 'msg': '已加入当前小组' });
+                }else{
+                    res.json({ 'status': 0, 'msg': '未加入小组' });
+                }
+            })
+        } else {
+            res.json({ 'status': 2, 'msg': '当前小组不存在' });
+        }
+
+
+
+    })
+
 
 })
 

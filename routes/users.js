@@ -1,6 +1,7 @@
 var express = require('express');
 const { json } = require('express/lib/response');
-var query = require('../database.config')
+var query = require('../database.config');
+var moment = require('moment');
 var router = express.Router();
 
 
@@ -59,12 +60,8 @@ router.post('/update', function (req, res) {
   const college = req.body.college;
   const major = req.body.major;
   const user_id = req.body.user_id;
-  const study_time = '{}';
-  const fans = '[]';
-  const focus = '[]';
-  const collection = '[]';
 
-  query('UPDATE user_profile SET user_name=?, user_img=?, sex=?,college=?,major=? ,study_time =?,fans=?,focus=?,collection=? WHERE user_id =?', [user_name, user_img, sex, college, major, study_time, fans, focus, collection, user_id], function (error, results, fields) {
+  query('UPDATE user_profile SET user_name=?, user_img=?, sex=?,college=?,major=? WHERE user_id =?', [user_name, user_img, sex, college, major, user_id], function (error, results, fields) {
 
     if (error) throw error;
     // console.log('The solution is: ', results);
@@ -214,6 +211,8 @@ router.post('/focus', function (req, res) {
   })
 
 })
+
+
 
 
 

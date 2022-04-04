@@ -111,7 +111,7 @@ router.post('/messageVerify', function (req, res) {
                 if (first) {
                     // 插入新用户数据
                     var sql = 'INSERT INTO user_profile(mobile,password,user_img,sex,user_name,college,major,mail,study_time,collection) VALUES(?,?,?,?,?,?,?,?,?,?)'
-                    query(sql, [mobile, '0000000000', '', '保密', '轨迹用户', '无', '无', '无','{}','[]'], function (error, results, fields) {
+                    query(sql, [mobile, '', '', '保密', '轨迹用户', '', '', '','{}','[]'], function (error, results, fields) {
                         if (error) throw error;
                         console.log('插入成功');
                     });
