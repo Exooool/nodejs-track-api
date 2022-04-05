@@ -1,7 +1,7 @@
 var express = require('express');
 const { json } = require('express/lib/response');
 var query = require('../database.config');
-var moment = require('moment');
+
 var router = express.Router();
 
 
