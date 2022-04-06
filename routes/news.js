@@ -81,10 +81,6 @@ router.post('/view', function (req, res) {
 
         })
     })
-
-
-
-
     return;
 
 })
@@ -136,7 +132,7 @@ router.post('/search', function (req, res) {
     console.log('进入/search路由');
     console.log(req.body);
     const search = '%' + req.body.search + '%';
-    var sql = 'SELECT news_id,news_content,content,news_time,hashtag,news_title,news_img,view_num,like_num, b.user_id, b.user_name,user_img,(SELECT COUNT(*) FROM news_comment c WHERE c.news_id = a.news_id) AS comment_num   FROM   news_list a JOIN user_profile b WHERE news_title like ? OR news_content like ? AND a.user_id = b.user_id;'
+    var sql = 'SELECT * FROM (SELECT news_id,news_content,content,news_time,hashtag,news_title,news_img,view_num,like_num, b.user_id, b.user_name,user_img,(SELECT COUNT(*) FROM news_comment c WHERE c.news_id = a.news_id) AS comment_num     FROM   news_list a JOIN user_profile b WHERE a.user_id = b.user_id) d WHERE d.news_title like ? OR d.content like ?;'
 
     query(sql, [search, search], function (error, results, fields) {
         if (error) throw error;
