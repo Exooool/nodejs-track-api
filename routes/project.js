@@ -208,7 +208,7 @@ router.post('/group/add', function (req, res) {
 router.get('/group/get', function (req, res) {
     console.log(req.body);
     const user_id = req.body.user_id;
-    const sql = 'SELECT f.group_id,f.user_id ,f.project_id, f.user_img, f.user_name, g.project_title,g.frequency FROM (SELECT c.group_id,c.user_id ,c.project_id, d.user_img, d.user_name FROM group_member c JOIN user_profile d JOIN (SELECT a.group_id FROM group_member a JOIN group_list b WHERE  a.user_id = ? AND a.group_id = b.group_id) e WHERE c.group_id = e.group_id AND c.user_id =d.user_id) f JOIN project_list g WHERE f.project_id = g.project_id';
+    const sql = 'SELECT f.group_id,f.user_id ,f.project_id, f.user_img, f.user_name, g.project_title,f.frequency FROM (SELECT c.group_id,c.user_id ,c.project_id, d.user_img, d.user_name,e.frequency FROM group_member c JOIN user_profile d JOIN (SELECT a.group_id,b.frequency FROM group_member a JOIN group_list b WHERE  a.user_id = ? AND a.group_id = b.group_id) e WHERE c.group_id = e.group_id AND c.user_id =d.user_id) f JOIN project_list g WHERE f.project_id = g.project_id';
     query(sql, [user_id], function (error, results, fields) {
         if (error) throw error;
         res.json({
@@ -437,11 +437,11 @@ router.post('/acceptInvite', function (req, res) {
 
         if (results.length != 0) {
             // 检查当前接受用户是否已加入该小组
-            query('SELECT * FROM group_member WHERE user_id = ? AND group_id = ? AND project_id = ?', [user_id,group_id,project_id], function (error, results, fields) {
+            query('SELECT * FROM group_member WHERE user_id = ? AND group_id = ? AND project_id = ?', [user_id, group_id, project_id], function (error, results, fields) {
                 if (error) throw error;
-                if(results.length!=0){
+                if (results.length != 0) {
                     res.json({ 'status': 2, 'msg': '已加入当前小组' });
-                }else{
+                } else {
                     res.json({ 'status': 0, 'msg': '未加入小组' });
                 }
             })
@@ -454,6 +454,20 @@ router.post('/acceptInvite', function (req, res) {
     })
 
 
+})
+
+
+router.post('/secret',function(req,res){
+    console.log(req.body);
+    const secret = req.body.secret;
+    const project_id = req.body.project_id;
+    query('UPDATE project_list SET secret = ? WHERE project_id = ?',[secret,project_id],function(error,results,fields){
+        if (error) throw error;
+        res.json({
+            'status':0,
+            'data': results
+        })
+    })
 })
 
 
