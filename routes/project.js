@@ -19,7 +19,7 @@ router.post('/get', function (req, res) {
             "status": 0,
             "data": results
         });
-        console.log(results)
+        // console.log(results)
     });
 
 
@@ -98,9 +98,28 @@ router.post('/remove', function (req, res, next) {
     })
 });
 
+// 修改计划
+router.post('/update', function (req, res) {
+    console.log(req.body);
+    const project_id = req.body.project_id;
+    const group_id = null;
+    const project_title = req.body.project_title;
+    const project_img = req.body.project_img;
+    const stage_list = req.body.stage_list;
+    const end_time = req.body.end_time;
+    const single_time = req.body.single_time;
+    const frequency = req.body.frequency;
+    const remainder_time = req.body.remainder_time;
+    const secret = 'false';
+    // 时间以键值对存储
+    const study_time = '{}';
+    const sql = 'UPDATE  project_list SET project_title = ?,group_id = ? ,project_img =? ,stage_list = ? ,end_time = ? ,single_time = ? ,frequency = ? ,remainder_time = ? ,secret = ?,study_time = ? WHERE project_id = ?';
+    query(sql, [project_title, group_id, project_img, stage_list, end_time, single_time, frequency, remainder_time, secret, study_time, project_id], function (error, results, fields) {
+        if (error) throw error;
+        console.log(results);
+        res.json({ 'status': 0, 'data': results });
+    })
 
-router.post('/update', function (req, res, next) {
-    res.render('index', { title: 'Express' });
 });
 
 
@@ -437,16 +456,69 @@ router.post('/acceptInvite', function (req, res) {
 
         if (results.length != 0) {
             // 检查当前接受用户是否已加入该小组
-            query('SELECT * FROM group_member WHERE user_id = ? AND group_id = ? AND project_id = ?', [user_id, group_id, project_id], function (error, results, fields) {
+            query('SELECT * FROM group_member WHERE user_id = ? AND group_id = ? ', [user_id, group_id], function (error, results, fields) {
                 if (error) throw error;
+                console.log(results);
                 if (results.length != 0) {
+                    
                     res.json({ 'status': 2, 'msg': '已加入当前小组' });
                 } else {
-                    res.json({ 'status': 0, 'msg': '未加入小组' });
+                    console.log('未加入小组');
+
+                    // 查询是否小组已满 3人
+                    query('SELECT COUNT(*) AS len FROM group_member WHERE group_id = ? ', [group_id], function (error, results, fields) {
+                        if (error) throw error;
+
+                        console.log('该小组人数：' + results[0].len);
+                        if (results[0].len < 3) {
+
+                            const sql = 'SELECT * FROM project_list WHERE project_id = ?';
+                            query(sql, [project_id], function (error, results, fields) {
+                                if (error) throw error;
+                                // console.log(results[0]);
+                                const project = results[0];
+
+                                // 向接受的用户添加一个相同的计划 然后返回计划id 并 添加到 group_member中
+                                const sql1 = 'INSERT INTO project_list(user_id,project_title,project_img,stage_list,end_time,single_time,frequency,remainder_time,secret,study_time,group_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)';
+                                query(sql1, [user_id, project.project_title, project.project_img, project.stage_list, project.end_time, project.single_time, project.frequency, project.remainder_time, 'false', '{}', project.group_id], function (error, results, fields) {
+                                    if (error) throw error;
+                                    // console.log(results);
+                                    // 找出刚刚插入的 计划id
+                                    const sql2 = 'SELECT MAX(project_id) AS project_id FROM project_list WHERE user_id = ? ';
+                                    query(sql2, [user_id], function (error, results, fields) {
+                                        if (error) throw error;
+                                        // console.log(results[0].project_id);
+
+                                        // 插入group_member记录 
+                                        const sql3 = 'INSERT INTO group_member(group_id,user_id,project_id) VALUES(?,?,?)';
+                                        query(sql3, [group_id, user_id, results[0].project_id], function (error, results, fields) {
+                                            if (error) throw error;
+
+                                            res.json({ 'status': 0, 'data': results, 'msg': '接受邀请 加入成功' })
+                                        })
+                                    })
+                                })
+
+                            })
+
+
+
+                        } else {
+                            res.json({
+                                'status': 3,
+                                'msg': '该小组已满'
+                            })
+                        }
+
+                    })
+
+
+
+
                 }
             })
         } else {
-            res.json({ 'status': 2, 'msg': '当前小组不存在' });
+            res.json({ 'status': 1, 'msg': '当前小组不存在' });
         }
 
 
@@ -457,14 +529,14 @@ router.post('/acceptInvite', function (req, res) {
 })
 
 
-router.post('/secret',function(req,res){
+router.post('/secret', function (req, res) {
     console.log(req.body);
     const secret = req.body.secret;
     const project_id = req.body.project_id;
-    query('UPDATE project_list SET secret = ? WHERE project_id = ?',[secret,project_id],function(error,results,fields){
+    query('UPDATE project_list SET secret = ? WHERE project_id = ?', [secret, project_id], function (error, results, fields) {
         if (error) throw error;
         res.json({
-            'status':0,
+            'status': 0,
             'data': results
         })
     })
