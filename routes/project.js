@@ -402,7 +402,7 @@ router.post('/invite', function (req, res) {
             const item = {
                 "time": time,
                 "user_id": user_id,
-                "content": "邀请你加入每天" + frequency + "的计划互助小组。#*" + project_id + "#*" + group_id
+                "content": "邀请您加入每天" + frequency + "的计划互助小组。#*" + project_id + "#*" + group_id
             };
             console.log(time);
             // 如果没有创建聊天室就创建
@@ -460,7 +460,7 @@ router.post('/acceptInvite', function (req, res) {
                 if (error) throw error;
                 console.log(results);
                 if (results.length != 0) {
-                    
+
                     res.json({ 'status': 2, 'msg': '已加入当前小组' });
                 } else {
                     console.log('未加入小组');
@@ -476,28 +476,37 @@ router.post('/acceptInvite', function (req, res) {
                             query(sql, [project_id], function (error, results, fields) {
                                 if (error) throw error;
                                 // console.log(results[0]);
-                                const project = results[0];
 
-                                // 向接受的用户添加一个相同的计划 然后返回计划id 并 添加到 group_member中
-                                const sql1 = 'INSERT INTO project_list(user_id,project_title,project_img,stage_list,end_time,single_time,frequency,remainder_time,secret,study_time,group_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)';
-                                query(sql1, [user_id, project.project_title, project.project_img, project.stage_list, project.end_time, project.single_time, project.frequency, project.remainder_time, 'false', '{}', project.group_id], function (error, results, fields) {
-                                    if (error) throw error;
-                                    // console.log(results);
-                                    // 找出刚刚插入的 计划id
-                                    const sql2 = 'SELECT MAX(project_id) AS project_id FROM project_list WHERE user_id = ? ';
-                                    query(sql2, [user_id], function (error, results, fields) {
+                                if (results.length != 0) {
+                                    const project = results[0];
+
+                                    // 向接受的用户添加一个相同的计划 然后返回计划id 并 添加到 group_member中
+                                    const sql1 = 'INSERT INTO project_list(user_id,project_title,project_img,stage_list,end_time,single_time,frequency,remainder_time,secret,study_time,group_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)';
+                                    query(sql1, [user_id, project.project_title, project.project_img, project.stage_list, project.end_time, project.single_time, project.frequency, project.remainder_time, 'false', '{}', project.group_id], function (error, results, fields) {
                                         if (error) throw error;
-                                        // console.log(results[0].project_id);
-
-                                        // 插入group_member记录 
-                                        const sql3 = 'INSERT INTO group_member(group_id,user_id,project_id) VALUES(?,?,?)';
-                                        query(sql3, [group_id, user_id, results[0].project_id], function (error, results, fields) {
+                                        // console.log(results);
+                                        // 找出刚刚插入的 计划id
+                                        const sql2 = 'SELECT MAX(project_id) AS project_id FROM project_list WHERE user_id = ? ';
+                                        query(sql2, [user_id], function (error, results, fields) {
                                             if (error) throw error;
+                                            // console.log(results[0].project_id);
 
-                                            res.json({ 'status': 0, 'data': results, 'msg': '接受邀请 加入成功' })
+                                            // 插入group_member记录 
+                                            const sql3 = 'INSERT INTO group_member(group_id,user_id,project_id) VALUES(?,?,?)';
+                                            query(sql3, [group_id, user_id, results[0].project_id], function (error, results, fields) {
+                                                if (error) throw error;
+
+                                                res.json({ 'status': 0, 'data': results, 'msg': '接受邀请 加入成功' })
+                                            })
                                         })
                                     })
-                                })
+                                }else{
+                                    res.json({
+                                        'status':1,
+                                        'msg': '无法找到创建的计划id'
+                                    })
+                                }
+
 
                             })
 
