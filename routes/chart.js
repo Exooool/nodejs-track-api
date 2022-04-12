@@ -113,4 +113,8 @@ router.post('/create', function (req, res) {
 
 })
 
+router.get('/getOnlineList',function(req,res){
+  res.json(onlineList);
+})
+
 module.exports = router;
