@@ -45,7 +45,6 @@ io.on('connection', (socket) => {
       io.emit('message', newMessage, to, id);
     }
 
-    // console.log();
   })
 
   // 断开连接

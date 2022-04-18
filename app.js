@@ -51,10 +51,16 @@ app.use(function (req, res, next) {
     query('SELECT user_id FROM user_profile WHERE mobile=?', [mobile], function (error, results, fields) {
       if (error) throw error;
       // console.log(results[0]['user_id']);
-      req.body.user_id = results[0]['user_id'];
+      if(results.length!=0){
+        req.body.user_id = results[0]['user_id'];
+        next();
+      }else{
+        res.json({'status':1,'msg':'当前用户不存在'})
+        
+      }
 
-
-      next();
+      return;
+      
     })
 
   } else {

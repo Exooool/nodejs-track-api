@@ -75,14 +75,10 @@ router.post('/messageVerify', function (req, res) {
 
         console.log(body);
 
-        // if (!error && response.statusCode == 200) {
-        //     console.log(body) // Show the HTML for the baidu homepage.
-        // }
         // 如果验证通过了就返回token并查询数据库是不是第一次登录
         if (data.is_valid) {
 
             // 查询数据库
-
             function UserQuery(callback) {
                 query('SELECT * FROM user_profile WHERE  mobile =?', [mobile], function (error, results, fields) {
                     if (error) throw error;
@@ -160,10 +156,6 @@ router.post('/loginTokenVerify', function (req, res) {
             console.log(mobile);
             // 将获取到的rsa加密的手机号 进行界面得到mobile
 
-            // 判断该用户是不是新用户
-            // query('SELECT * FROM user_profile WHERE user_id = ?',[mobile],function (error, results, fields){
-
-            // })
 
             function UserQuery(callback) {
                 query('SELECT * FROM user_profile WHERE  mobile =?', [mobile], function (error, results, fields) {

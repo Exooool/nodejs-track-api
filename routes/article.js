@@ -6,12 +6,14 @@ var path = require('path');
 
 var router = express.Router();
 
-var uploader = multer({ dest: path.join(path.dirname(__dirname), 'public', 'images') })
+
 
 /* GET users listing. */
 router.get('/', function (req, res, next) {
     res.send('respond with a resource');
 });
+
+var uploader = multer({ dest: path.join(path.dirname(__dirname), 'public', 'images') })
 
 // __dirname总是指向执行js所在的绝对地址
 // 上传单张文章图片
